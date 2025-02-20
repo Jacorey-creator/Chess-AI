@@ -29,6 +29,8 @@ namespace Chess.Game {
 
 		Result gameResult;
 
+		public bool chess960;
+
 		Player whitePlayer;
 		Player blackPlayer;
 		Player playerToMove;
@@ -98,15 +100,21 @@ namespace Chess.Game {
 			boardUI.SetPerspective (true);
 			NewGame (PlayerType.AI, PlayerType.AI);
 		}
-
+		public void Chess960Game() 
+		{
+			chess960 = !chess960;
+			NewGame(true);
+		}
 		void NewGame (PlayerType whitePlayerType, PlayerType blackPlayerType) {
 			gameMoves.Clear ();
 			if (loadCustomPosition) {
-				board.LoadPosition (customPosition);
-				searchBoard.LoadPosition (customPosition);
+				board.LoadPosition (chess960 ? customPosition : FenUtility.GenerateChess960FEN());
+				searchBoard.LoadPosition (chess960 ? customPosition : FenUtility.GenerateChess960FEN());
 			} else {
-				board.LoadStartPosition ();
-				searchBoard.LoadStartPosition ();
+				if (!chess960) board.LoadStartPosition();
+				else board.LoadPosition(FenUtility.GenerateChess960FEN());
+				if (!chess960) searchBoard.LoadStartPosition();
+				else searchBoard.LoadPosition(FenUtility.GenerateChess960FEN());
 			}
 			onPositionLoaded?.Invoke ();
 			boardUI.UpdatePosition (board);

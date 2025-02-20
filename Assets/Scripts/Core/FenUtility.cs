@@ -1,6 +1,9 @@
 ﻿namespace Chess {
+	using System;
 	using System.Collections.Generic;
-	public static class FenUtility {
+    using System.Linq;
+
+    public static class FenUtility {
 
 		static Dictionary<char, int> pieceTypeFromSymbol = new Dictionary<char, int> () {
 			['k'] = Piece.King, ['p'] = Piece.Pawn, ['n'] = Piece.Knight, ['b'] = Piece.Bishop, ['r'] = Piece.Rook, ['q'] = Piece.Queen
@@ -8,8 +11,68 @@
 
 		public const string startFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-		// Load position from fen string
-		public static LoadedPositionInfo PositionFromFen (string fen) {
+        // Generate a random Chess960 FEN string
+        public static string GenerateChess960FEN()
+        {
+            char[] backRank = new char[8] { 'R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R' };
+
+            // Shuffle the pieces while following Chess960 rules
+            ShuffleBackRank(backRank);
+
+            // Convert the rank into a FEN string
+            string blackRank = new string(backRank);
+            string whiteRank = blackRank.ToLower();
+
+            // Standard Chess960 pawn and board structure
+            return $"{whiteRank}/pppppppp/8/8/8/8/PPPPPPPP/{blackRank} w KQkq - 0 1";
+        }
+
+        private static void ShuffleBackRank(char[] backRank)
+        {
+            Random random = new Random();
+
+            // Ensure bishops are on opposite-colored squares
+            int lightBishopIndex = random.Next(0, 4) * 2; // Even index (light square)
+            int darkBishopIndex = random.Next(0, 4) * 2 + 1; // Odd index (dark square)
+            backRank[lightBishopIndex] = 'B';
+            backRank[darkBishopIndex] = 'B';
+
+            // Remaining positions after bishops are placed
+            List<int> availablePositions = Enumerable.Range(0, 8)
+                .Where(i => i != lightBishopIndex && i != darkBishopIndex)
+                .ToList();
+
+            ShuffleList(availablePositions, random);
+
+            // Assign remaining pieces: Queen, Knights, Rooks, King
+            backRank[availablePositions[0]] = 'Q';
+            backRank[availablePositions[1]] = 'N';
+            backRank[availablePositions[2]] = 'N';
+            backRank[availablePositions[3]] = 'R';
+            backRank[availablePositions[4]] = 'K';
+            backRank[availablePositions[5]] = 'R';
+
+            // Ensure the king is between the rooks
+            while (!(Array.IndexOf(backRank, 'R') < Array.IndexOf(backRank, 'K') &&
+                     Array.LastIndexOf(backRank, 'R') > Array.IndexOf(backRank, 'K')))
+            {
+                ShuffleList(availablePositions, random);
+                backRank[availablePositions[3]] = 'R';
+                backRank[availablePositions[4]] = 'K';
+                backRank[availablePositions[5]] = 'R';
+            }
+        }
+        private static void ShuffleList(List<int> list, Random random)
+        {
+            for (int i = list.Count - 1; i > 0; i--)
+            {
+                int j = random.Next(i + 1);
+                (list[i], list[j]) = (list[j], list[i]);
+            }
+        }
+
+        // Load position from fen string
+        public static LoadedPositionInfo PositionFromFen (string fen) {
 
 			LoadedPositionInfo loadedPositionInfo = new LoadedPositionInfo ();
 			string[] sections = fen.Split (' ');
