@@ -11,7 +11,6 @@
 
 		public const string startFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-        // Generate a random Chess960 FEN string
         public static string GenerateChess960FEN()
         {
             char[] backRank = new char[8] { 'R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R' };
@@ -27,41 +26,61 @@
             return $"{whiteRank}/pppppppp/8/8/8/8/PPPPPPPP/{blackRank} w KQkq - 0 1";
         }
 
-        private static void ShuffleBackRank(char[] backRank)
+        public static void ShuffleBackRank(char[] backRank)
         {
             Random random = new Random();
 
-            // Ensure bishops are on opposite-colored squares
-            int lightBishopIndex = random.Next(0, 4) * 2; // Even index (light square)
-            int darkBishopIndex = random.Next(0, 4) * 2 + 1; // Odd index (dark square)
+            // Place bishops on opposite-colored squares
+            List<int> lightSquares = new List<int> { 0, 2, 4, 6 }; // Even indices (light squares)
+            List<int> darkSquares = new List<int> { 1, 3, 5, 7 };  // Odd indices (dark squares)
+
+            // Shuffle and select one position for each bishop from their respective color lists
+            int lightBishopIndex = lightSquares[random.Next(lightSquares.Count)];
+            lightSquares.Remove(lightBishopIndex);  // Ensure no conflicts with the dark bishop
+            int darkBishopIndex = darkSquares[random.Next(darkSquares.Count)];
+
             backRank[lightBishopIndex] = 'B';
             backRank[darkBishopIndex] = 'B';
 
-            // Remaining positions after bishops are placed
+            // Remaining positions after placing bishops
             List<int> availablePositions = Enumerable.Range(0, 8)
                 .Where(i => i != lightBishopIndex && i != darkBishopIndex)
                 .ToList();
 
+			availablePositions.Remove(lightBishopIndex);
+			availablePositions.Remove(darkBishopIndex);
+
+            // Explicitly place the king between the two rooks
+            int kingIndex = random.Next(3, 5);  // King must be placed between 3-5, inclusive
+            backRank[kingIndex] = 'K';
+            availablePositions.Remove(kingIndex);
+
+            // Split the available positions into left and right of the king
+            List<int> leftOfKing = availablePositions.Where(i => i < kingIndex).ToList();
+            List<int> rightOfKing = availablePositions.Where(i => i > kingIndex).ToList();
+
+            // Place the rooks: one on the left and one on the right of the king
+            int rook1Index = leftOfKing[random.Next(leftOfKing.Count)];
+			availablePositions.Remove(rook1Index);
+            int rook2Index = rightOfKing[random.Next(rightOfKing.Count)];
+            availablePositions.Remove(rook2Index);
+
+
+            backRank[rook1Index] = 'R';
+            backRank[rook2Index] = 'R';
+
+            // Now only assign the remaining pieces (Q, N, N)
+            availablePositions.Remove(rook1Index);
+            availablePositions.Remove(rook2Index); // Remove the rook positions from available
+
             ShuffleList(availablePositions, random);
-
-            // Assign remaining pieces: Queen, Knights, Rooks, King
-            backRank[availablePositions[0]] = 'Q';
-            backRank[availablePositions[1]] = 'N';
-            backRank[availablePositions[2]] = 'N';
-            backRank[availablePositions[3]] = 'R';
-            backRank[availablePositions[4]] = 'K';
-            backRank[availablePositions[5]] = 'R';
-
-            // Ensure the king is between the rooks
-            while (!(Array.IndexOf(backRank, 'R') < Array.IndexOf(backRank, 'K') &&
-                     Array.LastIndexOf(backRank, 'R') > Array.IndexOf(backRank, 'K')))
-            {
-                ShuffleList(availablePositions, random);
-                backRank[availablePositions[3]] = 'R';
-                backRank[availablePositions[4]] = 'K';
-                backRank[availablePositions[5]] = 'R';
-            }
+            backRank[availablePositions[0]] = 'Q';  // Place Queen
+            availablePositions.RemoveAt(0);
+            backRank[availablePositions[0]] = 'N';  // Place one Knight
+            availablePositions.RemoveAt(0);
+            backRank[availablePositions[0]] = 'N';  // Place the other Knight
         }
+
         private static void ShuffleList(List<int> list, Random random)
         {
             for (int i = list.Count - 1; i > 0; i--)
